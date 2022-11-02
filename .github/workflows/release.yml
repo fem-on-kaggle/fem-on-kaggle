@@ -1,0 +1,339 @@
+name: Release new package
+
+on:
+  workflow_dispatch:
+    inputs:
+      library:
+        description: "Library to build"
+      task:
+        description: "Task to be done: package (default) or test. If empty, a package job is requested"
+      args:
+        description: "Additional space separated arguments to be passed to the build script. If empty, no arguments are passed"
+  workflow_call:
+    inputs:
+      library:
+        description: "Library to build"
+        type: string
+      task:
+        description: "Task to be done: package (default) or test. If empty, a package job is requested"
+        type: string
+      args:
+        description: "Additional space separated arguments to be passed to the build script. If empty, no arguments are passed"
+        type: string
+    secrets:
+      REPO_ACCESS_TOKEN:
+        description: "Token that enables writing to the website repository"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    container: femoncolab/base_images:latest
+    steps:
+      - name: Store the current date and time
+        id: date_time
+        run: echo "date_time=$(date '+%Y%m%d-%H%M%S')" >> ${GITHUB_OUTPUT}
+      - name: Mark workspace as safe
+        run: |
+          git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+      - uses: actions/checkout@v3
+        with:
+          set-safe-directory: false
+      - name: Compute short SHA of the commit
+        id: sha_short
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> ${GITHUB_OUTPUT}
+      - name: Compute docker tag
+        id: docker_tag
+        run: echo "docker_tag=$(bash /usr/bin/compute_docker_tag.sh)" >> ${GITHUB_OUTPUT}
+      - name: Print release name, release date, git commit sha, task and args
+        run: echo "${{ (inputs || github.event.inputs).library }} ${{ steps.date_time.outputs.date_time }} ${{ steps.sha_short.outputs.sha_short }} ${{ (inputs || github.event.inputs).task }} ${{ (inputs || github.event.inputs).args }}"
+      - name: Determine which token to use when cloning website repository
+        if: (inputs || github.event.inputs).task != 'test'
+        id: token_website
+        run: |
+          if [[ "${GITHUB_REPOSITORY}" == "${PROJECT_NAME}/${PROJECT_NAME}" ]]; then
+            echo "token=${{ secrets.REPO_ACCESS_TOKEN }}" >> ${GITHUB_OUTPUT}
+          else
+            echo "token=${{ github.token }}" >> ${GITHUB_OUTPUT}
+          fi
+        shell: bash
+      - name: Mark website directory as safe
+        run: |
+          git config --global --add safe.directory _build/html
+      - name: Clone website repository
+        if: (inputs || github.event.inputs).task != 'test'
+        uses: actions/checkout@v3
+        with:
+          repository: fem-on-colab/fem-on-colab.github.io
+          token: ${{ steps.token_website.outputs.token }}
+          ref: gh-pages
+          fetch-depth: 0
+          path: _build/html
+          set-safe-directory: false
+      - name: Determine latest releases from website repository
+        if: (inputs || github.event.inputs).task != 'test'
+        id: releases_website
+        run: |
+          LIBRARY=${{ (inputs || github.event.inputs).library }}
+          ARGS_ARRAY=(${{ (inputs || github.event.inputs).args }})
+          ARGS_JOINED=$(IFS="-" ; echo "${ARGS_ARRAY[*]}")
+          REPODIR=${PWD}
+          pushd _build/html
+          WEBSITE_FETCH_URL=$(git remote get-url origin)
+          WEBSITE_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          WEBSITE_RAW_PREFIX="${WEBSITE_FETCH_URL}/raw"
+          RELEASE_FILES_ALL=($(git ls-tree -r ${WEBSITE_BRANCH} --name-only -- releases | sed "s|releases/||"))
+          declare -a RELEASE_FILES
+          declare -a RELEASED_LIBRARIES
+          for RELEASE_FILE in "${RELEASE_FILES_ALL[@]}"; do
+            if [[ "${RELEASE_FILE}" == *-install.sh ]]; then
+              RELEASED_LIBRARY=$(echo ${RELEASE_FILE} | sed "s|-install.sh||")
+              if [[ -L "releases/${RELEASE_FILE}" ]]; then
+                RELEASE_FILE=$(readlink releases/${RELEASE_FILE})
+              fi
+              ANY_ARGS_RELEASE_FILES=($(find releases -name "${RELEASED_LIBRARY}-install-*.sh"))
+              if [[ -z "${ARGS_JOINED}" || (-n "${ARGS_JOINED}" && -z "${ANY_ARGS_RELEASE_FILES[*]}") ]]; then
+                RELEASED_LIBRARIES+=(${RELEASED_LIBRARY})
+                RELEASE_FILES+=(releases/${RELEASE_FILE})
+              fi
+            elif [[ "${RELEASE_FILE}" == *-install-${ARGS_JOINED}.sh ]]; then
+              RELEASED_LIBRARIES+=($(echo ${RELEASE_FILE} | sed "s|-install-${ARGS_JOINED}.sh||"))
+              RELEASE_FILES+=(releases/${RELEASE_FILE})
+            fi
+          done
+          declare -a RELEASE_INSTALL_SCRIPT_ENVS
+          declare -a RELEASE_INSTALL_SCRIPT_RAW_URLS
+          for I in "${!RELEASED_LIBRARIES[@]}"; do
+            if [[ "${RELEASED_LIBRARIES[I]}" != "${LIBRARY}" ]]; then
+              RELEASED_LIBRARY_CAPITAL=$(echo ${RELEASED_LIBRARIES[I]} | tr a-z A-Z)
+              RELEASE_COMMIT=$(git rev-parse --short $(git rev-list -1 ${WEBSITE_BRANCH} -- ${RELEASE_FILES[I]}))
+              RELEASE_INSTALL_SCRIPT_ENV=${RELEASED_LIBRARY_CAPITAL}_INSTALL_SCRIPT_PATH
+              if grep -q "${RELEASE_INSTALL_SCRIPT_ENV}_IN" "${REPODIR}/${LIBRARY}/install.sh"; then
+                RELEASE_INSTALL_SCRIPT_ENVS+=(${RELEASE_INSTALL_SCRIPT_ENV})
+                RELEASE_INSTALL_SCRIPT_RAW_URLS+=(${WEBSITE_RAW_PREFIX}/${RELEASE_COMMIT}/${RELEASE_FILES[I]})
+              fi
+            fi
+          done
+          echo "release_install_script_envs=${RELEASE_INSTALL_SCRIPT_ENVS[@]}" >> ${GITHUB_OUTPUT}
+          echo "release_install_script_raw_urls=${RELEASE_INSTALL_SCRIPT_RAW_URLS[@]}" >> ${GITHUB_OUTPUT}
+          popd
+        shell: bash
+      - name: Fetch updated package list
+        run: apt update -qq
+      - name: Build library
+        if: (inputs || github.event.inputs).task != 'test'
+        run: |
+          LIBRARY=${{ (inputs || github.event.inputs).library }}
+          ARGS="${{ (inputs || github.event.inputs).args }}"
+          if [[ -f ${LIBRARY}/build.sh ]]; then
+            RELEASE_INSTALL_SCRIPT_ENVS=(${{ steps.releases_website.outputs.release_install_script_envs }})
+            RELEASE_INSTALL_SCRIPT_RAW_URLS=(${{ steps.releases_website.outputs.release_install_script_raw_urls }})
+            for I in "${!RELEASE_INSTALL_SCRIPT_ENVS[@]}"; do
+              declare -x "${RELEASE_INSTALL_SCRIPT_ENVS[I]}"="${RELEASE_INSTALL_SCRIPT_RAW_URLS[I]}"
+            done
+            bash ${LIBRARY}/build.sh ${ARGS}
+          fi
+        env:
+          VERBOSE: 1
+          V: 1
+        shell: bash
+      - name: Look for libstdc++.so in ldd of generated libraries
+        if: (inputs || github.event.inputs).task != 'test'
+        run: |
+          EXTENSIONS=('*\.so' '*\.so\.*')
+          declare -a ERROR_LIBRARIES
+          for EXTENSION in "${EXTENSIONS[@]}"; do
+            ERROR_LIBRARIES=("${ERROR_LIBRARIES[@]}" $(find ${INSTALL_PREFIX} -name ${EXTENSION} -exec bash -c 'ldd $0 | grep libstdc++.so.6 1>/dev/null 2>/dev/null && echo $0' {} \;))
+          done
+          if [ ${#ERROR_LIBRARIES[@]} -eq 0 ]; then
+            echo "No reference to libstdc++.so was found"
+          else
+            for ERROR_LIBRARY in "${ERROR_LIBRARIES[@]}"; do
+              echo "Error: library ${ERROR_LIBRARY} depends on libstdc++.so"
+              ldd -v ${ERROR_LIBRARY}
+            done
+            false
+          fi
+        shell: bash
+      - name: Package library
+        if: (inputs || github.event.inputs).task != 'test'
+        run: |
+          LIBRARY=${{ (inputs || github.event.inputs).library }}
+          DEPENDENCIES=($(find /tmp -name '*-install\.tar.gz'))
+          if [ "${#DEPENDENCIES[@]}" -gt "0" ]; then
+            source scripts/prepare_for_installation.sh ${LIBRARY}-full
+            source scripts/remove_dependencies_from_archive.sh ${LIBRARY} ${PWD}/${LIBRARY}-full-install.tar.gz ${DEPENDENCIES[@]}
+          else
+            source scripts/prepare_for_installation.sh ${LIBRARY}
+          fi
+        shell: bash
+      - name: Prepare pytest configuration file
+        run: |
+          LIBRARY=${{ (inputs || github.event.inputs).library }}
+          PYTHONUSERBASE=/usr pip3 install --no-dependencies git+https://github.com/multiphenics/nbvalx.git
+          wget https://github.com/multiphenics/nbvalx/raw/main/tests/notebooks/conftest.py -O ${LIBRARY}/conftest.py
+      - name: Prepare notebook files for testing
+        run: |
+          LIBRARY=${{ (inputs || github.event.inputs).library }}
+          for TEST_NOTEBOOK in ${LIBRARY}/*.ipynb; do
+            sed -i "s|BACKEND_LIBRARY_IN|${BACKEND_LIBRARY}|g" ${TEST_NOTEBOOK}
+            sed -i "s|PROJECT_NAME_IN|${PROJECT_NAME}|g" ${TEST_NOTEBOOK}
+          done
+      - name: Copy notebook files for website upload
+        if: (inputs || github.event.inputs).task != 'test'
+        run: |
+          LIBRARY=${{ (inputs || github.event.inputs).library }}
+          rsync -avz --include "*/" --include="*.ipynb" --exclude="*" ${LIBRARY} _build/html/tests/
+          for TEST_NOTEBOOK in _build/html/tests/${LIBRARY}/*.ipynb; do
+            python3 /usr/bin/preprocess_notebook_for_website.py ${LIBRARY} ${TEST_NOTEBOOK}
+          done
+      - name: Test library
+        run: |
+          LIBRARY=${{ (inputs || github.event.inputs).library }}
+          TASK=${{ (inputs || github.event.inputs).task }}
+          ARGS="${{ (inputs || github.event.inputs).args }}"
+          if [[ "${TASK}" != "test" ]]; then
+            RELEASE_INSTALL_SCRIPT_ENVS=(${{ steps.releases_website.outputs.release_install_script_envs }})
+            RELEASE_INSTALL_SCRIPT_RAW_URLS=(${{ steps.releases_website.outputs.release_install_script_raw_urls }})
+            for I in "${!RELEASE_INSTALL_SCRIPT_ENVS[@]}"; do
+              declare -x "${RELEASE_INSTALL_SCRIPT_ENVS[I]}"="${RELEASE_INSTALL_SCRIPT_RAW_URLS[I]}"
+            done
+            LIBRARY_CAPITAL=$(echo ${LIBRARY} | tr a-z A-Z)
+            declare -x "${LIBRARY_CAPITAL}_ARCHIVE_PATH"="${PWD}/${LIBRARY}-install.tar.gz"
+            bash ${LIBRARY}/install.sh
+            export PYTHONPATH="/usr/lib/${PYTHON_VERSION}/build-task/extra-site-packages:${PYTHONPATH}"
+          else
+            export PYTHONPATH="/usr/lib/${PYTHON_VERSION}/test-task/extra-site-packages:${PYTHONPATH}"
+          fi
+          LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6 LD_LIBRARY_PATH="" ARGS="${ARGS}" pytest --nbval-cell-timeout=300 ${LIBRARY}/
+        env:
+          CPPFLAGS: ""
+          LDFLAGS: ""
+        shell: bash
+      - name: Check if a release is needed
+        if: (inputs || github.event.inputs).task != 'test'
+        id: check_release
+        run: |
+          LIBRARY=${{ (inputs || github.event.inputs).library }}
+          ARGS_ARRAY=(${{ (inputs || github.event.inputs).args }})
+          [[ -f "${LIBRARY}/build.sh" ]] && NEEDS_RELEASE_ARCHIVE="yes" || NEEDS_RELEASE_ARCHIVE="no"
+          echo "needs_release_archive=${NEEDS_RELEASE_ARCHIVE}" >> ${GITHUB_OUTPUT}
+          if [[ -n "${ARGS_ARRAY[*]}" ]]; then
+            ARGS_JOINED_SPACE=$(IFS="-" ; echo "${ARGS_ARRAY[*]}")
+            ARGS_JOINED_HYPHEN=$(IFS="-" ; echo "${ARGS_ARRAY[*]}")
+            RELEASE_FILE=_build/html/releases/${LIBRARY}-install-${ARGS_JOINED_HYPHEN}.sh
+          else
+            RELEASE_FILE=_build/html/releases/${LIBRARY}-install.sh
+          fi
+          echo "release_file=${RELEASE_FILE}" >> ${GITHUB_OUTPUT}
+          if [[ "${NEEDS_RELEASE_ARCHIVE}" == "yes" ]]; then
+            DATETIME=${{ steps.date_time.outputs.date_time }}
+            SHA_SHORT=${{ steps.sha_short.outputs.sha_short }}
+            if [[ -n "${ARGS_ARRAY[*]}" ]]; then
+              RELEASE_TITLE="${LIBRARY} ${DATETIME} ${SHA_SHORT} ${ARGS_JOINED_SPACE}"
+              RELEASE_TAG="${LIBRARY}-${DATETIME}-${SHA_SHORT}-${ARGS_JOINED_HYPHEN}"
+            else
+              RELEASE_TITLE="${LIBRARY} ${DATETIME} ${SHA_SHORT}"
+              RELEASE_TAG="${LIBRARY}-${DATETIME}-${SHA_SHORT}"
+            fi
+            RELEASE_ARCHIVE="${LIBRARY}-install.tar.gz"
+            echo "release_title=${RELEASE_TITLE}" >> ${GITHUB_OUTPUT}
+            echo "release_tag=${RELEASE_TAG}" >> ${GITHUB_OUTPUT}
+            echo "release_archive=${RELEASE_ARCHIVE}" >> ${GITHUB_OUTPUT}
+          fi
+        shell: bash
+      - name: Add release to repository
+        if: (inputs || github.event.inputs).task != 'test' && steps.check_release.outputs.needs_release_archive == 'yes'
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          automatic_release_tag: ${{ steps.check_release.outputs.release_tag }}
+          title: "${{ steps.check_release.outputs.release_title }}"
+          files: ${{ steps.check_release.outputs.release_archive }}
+      - name: Update release archive name, as sometimes the md5sum gets appended to release assets name
+        if: (inputs || github.event.inputs).task != 'test' && steps.check_release.outputs.needs_release_archive == 'yes'
+        id: update_release_archive
+        run: |
+          RELEASE_TAG=${{ steps.check_release.outputs.release_tag }}
+          RELEASE_ARCHIVE=${{ steps.check_release.outputs.release_archive }}
+          if wget https://github.com/${PROJECT_NAME}/${PROJECT_NAME}/releases/download/${RELEASE_TAG}/${RELEASE_ARCHIVE} -O /dev/null; then
+            echo "release_archive=${RELEASE_ARCHIVE}" >> ${GITHUB_OUTPUT}
+          else
+            MD5_RELEASE_ARCHIVE=$(md5sum "${RELEASE_ARCHIVE}" | cut -d" " -f 1)
+            RELEASE_ARCHIVE=${RELEASE_ARCHIVE/.gz/-${MD5_RELEASE_ARCHIVE}.gz}
+            wget https://github.com/${PROJECT_NAME}/${PROJECT_NAME}/releases/download/${RELEASE_TAG}/${RELEASE_ARCHIVE} -O /dev/null
+            echo "release_archive=${RELEASE_ARCHIVE}" >> ${GITHUB_OUTPUT}
+          fi
+        shell: bash
+      - name: Prepare release file for website
+        if: (inputs || github.event.inputs).task != 'test'
+        run: |
+          LIBRARY=${{ (inputs || github.event.inputs).library }}
+          LIBRARY_CAPITAL=$(echo ${LIBRARY} | tr a-z A-Z)
+          DATETIME=${{ steps.date_time.outputs.date_time }}
+          SHA_SHORT=${{ steps.sha_short.outputs.sha_short }}
+          DOCKER_TAG=${{ steps.docker_tag.outputs.docker_tag }}
+          NEEDS_RELEASE_ARCHIVE=${{ steps.check_release.outputs.needs_release_archive }}
+          RELEASE_FILE=${{ steps.check_release.outputs.release_file }}
+          RELEASE_FILE_DOCKER=${RELEASE_FILE/.sh/.docker}
+          RELEASE_INSTALL_SCRIPT_ENVS=(${{ steps.releases_website.outputs.release_install_script_envs }})
+          RELEASE_INSTALL_SCRIPT_RAW_URLS=(${{ steps.releases_website.outputs.release_install_script_raw_urls }})
+          cp ${LIBRARY}/install.sh ${RELEASE_FILE}
+          sed -i "s|INSTALL_PREFIX_IN|${INSTALL_PREFIX}|g" ${RELEASE_FILE}
+          sed -i "s|PROJECT_NAME_IN|${PROJECT_NAME}|g" ${RELEASE_FILE}
+          for I in "${!RELEASE_INSTALL_SCRIPT_ENVS[@]}"; do
+            if grep -q "${RELEASE_INSTALL_SCRIPT_ENVS[I]}_IN" "${RELEASE_FILE}"; then
+              RELEASE_INSTALL_SCRIPT_I_DOCKER_TAG="$(wget -qO- ${RELEASE_INSTALL_SCRIPT_RAW_URLS[I]/.sh/.docker})"
+              if [[ "${RELEASE_INSTALL_SCRIPT_I_DOCKER_TAG}" != "${DOCKER_TAG}" ]]; then
+                echo "Incompatible docker tags: ${RELEASE_INSTALL_SCRIPT_ENVS[I]} has tag ${RELEASE_INSTALL_SCRIPT_I_DOCKER_TAG}, while ${LIBRARY} was built on an image tagged ${DOCKER_TAG}"
+              fi
+              sed -i "s|${RELEASE_INSTALL_SCRIPT_ENVS[I]}_IN|${RELEASE_INSTALL_SCRIPT_RAW_URLS[I]}|g" "${RELEASE_FILE}"
+            fi
+          done
+          if [[ "${NEEDS_RELEASE_ARCHIVE}" == "yes" ]]; then
+            RELEASE_TAG=${{ steps.check_release.outputs.release_tag }}
+            RELEASE_ARCHIVE=${{ steps.update_release_archive.outputs.release_archive }}
+            sed -i "s|${LIBRARY_CAPITAL}_ARCHIVE_PATH_IN|https://github.com/${PROJECT_NAME}/${PROJECT_NAME}/releases/download/${RELEASE_TAG}/${RELEASE_ARCHIVE}|g" ${RELEASE_FILE}
+          fi
+          for ANNOUNCEMENT_POSITION in pre post; do
+            if [[ -f "/usr/share/announcements/${ANNOUNCEMENT_POSITION}.txt" ]]; then
+              python3 scripts/add_announcement.py ${LIBRARY} ${RELEASE_FILE} "/usr/share/announcements/${ANNOUNCEMENT_POSITION}.txt" "${ANNOUNCEMENT_POSITION}"
+            fi
+          done
+          echo ${DOCKER_TAG} > ${RELEASE_FILE_DOCKER}
+        shell: bash
+      - name: Upload release and notebook files to website
+        if: (inputs || github.event.inputs).task != 'test' && github.repository == 'fem-on-colab/fem-on-colab'
+        run: |
+          LIBRARY=${{ (inputs || github.event.inputs).library }}
+          SHA_SHORT=${{ steps.sha_short.outputs.sha_short }}
+          pushd _build/html
+          git config user.name "GitHub Actions"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add releases/${LIBRARY}-install*.sh
+          git add releases/${LIBRARY}-install*.docker
+          git add tests/${LIBRARY}/*.ipynb
+          WEBSITE_BRANCH=$(git branch --show-current)
+          git pull origin ${WEBSITE_BRANCH}
+          [ -n "$(git status --porcelain=v1 2>/dev/null)" ] && git commit -m "deploy: ${GITHUB_REPOSITORY}@${SHA_SHORT}"
+          git push origin ${WEBSITE_BRANCH}
+          popd
+        shell: bash
+      - name: Create an archive of build directory, install prefix and test directory in case of failure
+        if: failure() || cancelled()
+        run: |
+          if compgen -G "/tmp/*-src" > /dev/null; then
+            tar czf build.tar.gz /tmp/*-src
+          fi
+          tar czf install-prefix.tar.gz ${INSTALL_PREFIX}
+          tar czf test.tar.gz ${{ (inputs || github.event.inputs).library }}
+        shell: bash
+      - name: Upload archive as an artifact in case of failure
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v3
+        with:
+          name: "artifact ${{ (inputs || github.event.inputs).library }} ${{ (inputs || github.event.inputs).task }} ${{ (inputs || github.event.inputs).args }}"
+          path: |
+            build.tar.gz
+            install-prefix.tar.gz
+            ${{ (inputs || github.event.inputs).library }}-install.tar.gz
+            test.tar.gz
