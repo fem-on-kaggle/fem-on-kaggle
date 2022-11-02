@@ -1,0 +1,27 @@
+name: Sync GitHub workflows with FEM on Colab
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync GitHub workflows with FEM on Colab
+        if: github.repository == 'fem-on-kaggle/fem-on-kaggle'
+        uses: fem-on-colab/is-synced-with-upstream-action@main
+        with:
+          upstream-repository: fem-on-colab/fem-on-colab
+          upstream-ref: main
+          target-ref: ${{ github.ref }}
+          file-patterns: .github/workflows/*.yml
+          commit-message-prefix: Sync GitHub workflows with FEM on Colab
+          token: ${{ secrets.WORKFLOW_ACCESS_TOKEN }}
+      - name: Warn if scheduled workflow is about to be disabled
+        if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && github.ref == 'refs/heads/main' && github.event_name == 'schedule'
+        uses: fem-on-colab/warn-workflow-about-to-be-disabled-action@main
+        with:
+          workflow-filename: sync_with_upstream.yml
+          days-elapsed: 50
