@@ -15,7 +15,7 @@ jobs:
         with:
           upstream-repository: fem-on-colab/fem-on-colab
           upstream-ref: main
-          target-ref: ${{ github.ref }}
+          target-ref: ${{ github.ref_name }}
           file-patterns: .github/workflows/*.yml
           commit-message-prefix: Sync GitHub workflows with FEM on Colab
           token: ${{ secrets.WORKFLOW_ACCESS_TOKEN }}
