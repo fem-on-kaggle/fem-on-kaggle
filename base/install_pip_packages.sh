@@ -8,7 +8,7 @@ set -e
 set -x
 
 # Install cmake (for building)
-PYTHONUSERBASE=/root/.local python3 -m pip install --user cmake
+PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip install --user cmake
 
 # Install nbval (for testing)
-PYTHONUSERBASE=/root/.local python3 -m pip install --user nbval
+PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip install --user nbval
