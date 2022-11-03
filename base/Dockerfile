@@ -59,5 +59,5 @@ ENV PATH="${INSTALL_PREFIX}/bin:${PATH}" \
 ENV CPPFLAGS="-static-libstdc++" \
     LDFLAGS="-static-libstdc++"
 
-CMD ["/bin/sh"]
+CMD ["/bin/bash"]
 ENTRYPOINT []
