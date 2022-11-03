@@ -7,7 +7,8 @@
 FROM gcr.io/kaggle-images/python:latest
 MAINTAINER Francesco Ballarin <francesco.ballarin@unicatt.it>
 
-ENV INSTALL_PREFIX=/opt/conda \
+ENV CONDA_PREFIX=/opt/conda \
+    INSTALL_PREFIX=/root/.local \
     FEM_ON_COLAB_SCRIPTS=/usr/local/share/fem-on-colab \
     PROJECT_NAME=fem-on-kaggle \
     PYTHON_VERSION=python3.7
