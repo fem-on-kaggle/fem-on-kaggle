@@ -16,6 +16,9 @@ ENV CONDA_PREFIX=/opt/conda \
 ENV BACKEND_LIBRARY=kaggle \
     DOCKER_SCRIPTS=${INSTALL_PREFIX}/share/${PROJECT_NAME}
 
+RUN rm -rf ${INSTALL_PREFIX} && \
+    mkdir -p ${INSTALL_PREFIX}
+
 COPY . ${DOCKER_SCRIPTS}
 
 RUN apt install -y -qq git && \
