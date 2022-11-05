@@ -50,6 +50,7 @@ RUN cd ${DOCKER_SCRIPTS} && \
     cd -
 
 RUN cd ${DOCKER_SCRIPTS} && \
+    mkdir -p /usr/lib/${PYTHON_VERSION} && \
     cp -r base/bin/* /usr/bin && \
     cp -r base/lib/python3/* /usr/lib/${PYTHON_VERSION} && \
     cp -r base/share/* /usr/share && \
