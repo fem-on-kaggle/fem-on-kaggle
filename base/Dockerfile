@@ -17,7 +17,8 @@ ENV BACKEND_LIBRARY=kaggle \
     FEM_ON_COLAB_SCRIPTS=${INSTALL_PREFIX}/share/fem-on-colab
 
 RUN rm -rf ${INSTALL_PREFIX} && \
-    mkdir -p ${INSTALL_PREFIX}
+    mkdir -p ${INSTALL_PREFIX} && \
+    mkdir -p ${INSTALL_PREFIX}/lib/${PYTHON_VERSION}/site-packages
 
 COPY . ${DOCKER_SCRIPTS}
 
