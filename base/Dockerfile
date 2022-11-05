@@ -9,12 +9,12 @@ MAINTAINER Francesco Ballarin <francesco.ballarin@unicatt.it>
 
 ENV CONDA_PREFIX=/opt/conda \
     INSTALL_PREFIX=/root/.local \
-    FEM_ON_COLAB_SCRIPTS=/usr/local/share/fem-on-colab \
     PROJECT_NAME=fem-on-kaggle \
     PYTHON_VERSION=python3.7
 
 ENV BACKEND_LIBRARY=kaggle \
-    DOCKER_SCRIPTS=${INSTALL_PREFIX}/share/${PROJECT_NAME}
+    DOCKER_SCRIPTS=${INSTALL_PREFIX}/share/${PROJECT_NAME} \
+    FEM_ON_COLAB_SCRIPTS=${INSTALL_PREFIX}/share/fem-on-colab
 
 RUN rm -rf ${INSTALL_PREFIX} && \
     mkdir -p ${INSTALL_PREFIX}
