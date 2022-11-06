@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           repository: fem-on-colab/fem-on-colab
-          ref: main
+          ref: mock
           set-safe-directory: false
       - name: Compute short SHA of the commit
         id: sha_short
