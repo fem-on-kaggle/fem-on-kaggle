@@ -32,17 +32,32 @@ jobs:
       - name: Store the current date and time
         id: date_time
         run: echo "date_time=$(date '+%Y%m%d-%H%M%S')" >> ${GITHUB_OUTPUT}
-      - name: Mark workspace as safe
+      - name: Mark FEM on Colab directory as safe
         run: |
           git config --global --add safe.directory "${GITHUB_WORKSPACE}"
-      - uses: actions/checkout@v3
+      - name: Clone FEM on Colab repository
+        uses: actions/checkout@v3
         with:
           repository: fem-on-colab/fem-on-colab
           ref: main
           set-safe-directory: false
+      - name: Mark FEM on Kaggle directory as safe
+        if: (inputs || github.event.inputs).task != 'test'
+        run: |
+          git config --global --add safe.directory _fem_on_kaggle
+      - name: Clone FEM on Kaggle repository
+        if: (inputs || github.event.inputs).task != 'test'
+        uses: actions/checkout@v3
+        with:
+          path: _fem_on_kaggle
+          set-safe-directory: false
       - name: Compute short SHA of the commit
         id: sha_short
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> ${GITHUB_OUTPUT}
+        run: |
+          pushd _fem_on_kaggle
+          echo "sha_short=$(git rev-parse --short HEAD)" >> ${GITHUB_OUTPUT}
+          popd
+        shell: bash
       - name: Compute docker tag
         id: docker_tag
         run: echo "docker_tag=$(bash /usr/bin/compute_docker_tag.sh)" >> ${GITHUB_OUTPUT}
@@ -247,8 +262,11 @@ jobs:
         run: |
           SHA_SHORT=${{ steps.sha_short.outputs.sha_short }}
           RELEASE_TAG=${{ steps.check_release.outputs.release_tag }}
+          pushd _fem_on_kaggle
           git tag ${RELEASE_TAG} ${SHA_SHORT}
           git push origin ${RELEASE_TAG}
+          popd
+        shell: bash
       - name: Add release to repository
         if: (inputs || github.event.inputs).task != 'test' && steps.check_release.outputs.needs_release_archive == 'yes'
         uses: ncipollo/release-action@v1
