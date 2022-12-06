@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 """Enable widgets."""
 
+import os
 import sys
 
 
@@ -17,11 +18,12 @@ if __name__ == "__main__":
     if package_name in ("itkwidgets", "pythreejs", "pyvista"):
         pass  # Nothing to be done
     elif package_name == "webgui_jupyter_widgets":
-        with open(package_init_file, "r") as f:
-            package_init_file_content = f.read().strip("\n")
-        package_init_file_content = package_init_file_content.replace(
+        package_widget_file = os.path.join(os.path.dirname(package_init_file), "widget.py")
+        with open(package_widget_file, "r") as f:
+            package_widget_file_content = f.read().strip("\n")
+        package_widget_file_content = package_widget_file_content.replace(
             "_IN_GOOGLE_COLAB = False", "_IN_GOOGLE_COLAB = True")
-        with open(package_init_file, "w") as f:
-            f.write(package_init_file_content)
+        with open(package_widget_file, "w") as f:
+            f.write(package_widget_file_content)
     else:
         raise RuntimeError("Invalid package")
