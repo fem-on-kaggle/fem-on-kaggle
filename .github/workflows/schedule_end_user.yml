@@ -157,7 +157,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Warn if scheduled workflow is about to be disabled
-        uses: fem-on-kaggle/warn-workflow-about-to-be-disabled-action@main
+        uses: fem-on-colab/warn-workflow-about-to-be-disabled-action@main
         with:
           workflow-filename: schedule_end_user.yml
           days-elapsed: 50
