@@ -14,8 +14,8 @@ if __name__ == "__main__":
     package_name = sys.argv[1]
     package_init_file = sys.argv[2]
 
-    assert package_name in ("itkwidgets", "pythreejs", "pyvista", "webgui_jupyter_widgets")
-    if package_name in ("itkwidgets", "pythreejs", "pyvista"):
+    assert package_name in ("pyvista", "webgui_jupyter_widgets")
+    if package_name == "pyvista":
         pass  # Nothing to be done
     elif package_name == "webgui_jupyter_widgets":
         package_widget_file = os.path.join(os.path.dirname(package_init_file), "widget.py")
