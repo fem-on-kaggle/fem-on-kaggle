@@ -1,0 +1,2 @@
+The version of libstdc++.so is different from the expected one.
+Please report this at https://github.com/fem-on-kaggle/fem-on-kaggle/issues

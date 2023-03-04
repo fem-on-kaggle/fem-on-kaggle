@@ -1,0 +1,4 @@
+The version of libstdc++.so is different from the expected one.
+The kernel will now crash. Upon restarting this, you will not see this
+message anymore, but packages may not be working properly.
+Please report this at https://github.com/fem-on-kaggle/fem-on-kaggle/issues
