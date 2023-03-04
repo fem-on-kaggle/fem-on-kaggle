@@ -135,6 +135,26 @@ jobs:
         shell: bash
       - name: Fetch updated package list
         run: apt update -qq
+      - name: Manually install gcc before building if libstdc++.so replacement is required
+        if: (inputs || github.event.inputs).task != 'test'
+        run: |
+          LIBRARY=${{ (inputs || github.event.inputs).library }}
+          TASK=${{ (inputs || github.event.inputs).task }}
+          if [[ "${REQUIRE_LIBSTDCXX_REPLACEMENT}" == "yes" ]]; then
+            if [[ "${LIBRARY}" != "gcc" ]]; then
+              if [[ "${TASK}" != "test" ]]; then
+                GCC_INSTALL_FILE="$PWD/_build/html/releases/gcc-install.sh"
+              else
+                GCC_INSTALL_FILE="/tmp/gcc-install.sh"
+                wget "https://${PROJECT_NAME}.github.io/releases/gcc-install.sh" -O ${GCC_INSTALL_FILE}
+              fi
+              LIBSTDCXX_IGNORE_REPLACED="yes" bash ${GCC_INSTALL_FILE}
+              if [[ "${TASK}" == "test" ]]; then
+                rm ${GCC_INSTALL_FILE}
+              fi
+            fi
+          fi
+        shell: bash
       - name: Build library
         if: (inputs || github.event.inputs).task != 'test'
         run: |
@@ -171,7 +191,7 @@ jobs:
               false
             fi
           else
-            echo "Statically linked to libstdc++.so was not requested"
+            echo "Statically linking to libstdc++.so was not requested"
           fi
         shell: bash
       - name: Package library
@@ -204,6 +224,25 @@ jobs:
         run: |
           LIBRARY=${{ (inputs || github.event.inputs).library }}
           rsync -avz --include "*/" --include="*.ipynb" --exclude="*" ${LIBRARY} _build/html/tests/
+      - name: Manually install gcc before testing if libstdc++.so replacement is required
+        run: |
+          LIBRARY=${{ (inputs || github.event.inputs).library }}
+          TASK=${{ (inputs || github.event.inputs).task }}
+          if [[ "${REQUIRE_LIBSTDCXX_REPLACEMENT}" == "yes" ]]; then
+            if [[ "${LIBRARY}" != "gcc" || ("${LIBRARY}" == "gcc" && "${TASK}" == "test") ]]; then
+              if [[ "${TASK}" != "test" ]]; then
+                GCC_INSTALL_FILE="$PWD/_build/html/releases/gcc-install.sh"
+              else
+                GCC_INSTALL_FILE="/tmp/gcc-install.sh"
+                wget "https://${PROJECT_NAME}.github.io/releases/gcc-install.sh" -O ${GCC_INSTALL_FILE}
+              fi
+              LIBSTDCXX_IGNORE_REPLACED="yes" bash ${GCC_INSTALL_FILE}
+              if [[ "${TASK}" == "test" ]]; then
+                rm ${GCC_INSTALL_FILE}
+              fi
+            fi
+          fi
+        shell: bash
       - name: Test library
         run: |
           LIBRARY=${{ (inputs || github.event.inputs).library }}
@@ -318,9 +357,11 @@ jobs:
             RELEASE_ARCHIVE=${{ steps.check_release.outputs.release_archive }}
             sed -i "s|${LIBRARY_CAPITAL}_ARCHIVE_PATH_IN|https://github.com/${PROJECT_NAME}/${PROJECT_NAME}/releases/download/${RELEASE_TAG}/${RELEASE_ARCHIVE}|g" ${RELEASE_FILE}
           fi
-          for ANNOUNCEMENT_POSITION in pre post; do
-            if [[ -f "/usr/share/announcements/${ANNOUNCEMENT_POSITION}.txt" ]]; then
-              python3 scripts/add_announcement.py ${LIBRARY} ${RELEASE_FILE} "/usr/share/announcements/${ANNOUNCEMENT_POSITION}.txt" "${ANNOUNCEMENT_POSITION}"
+          for ANNOUNCEMENT_INDEX in {0..9}; do
+            if [[ -f "/usr/share/announcements/${LIBRARY}_${ANNOUNCEMENT_INDEX}.txt" ]]; then
+              python3 scripts/add_announcement.py ${LIBRARY} ${RELEASE_FILE} "/usr/share/announcements/${LIBRARY}_${ANNOUNCEMENT_INDEX}.txt" "echo \$${LIBRARY_CAPITAL}_ANNOUNCEMENT_${ANNOUNCEMENT_INDEX}"
+            else
+              break
             fi
           done
           echo ${DOCKER_TAG} > ${RELEASE_FILE_DOCKER}
