@@ -14,3 +14,7 @@ conda install -c conda-forge ncurses
 # Install libxml2, which is already shipped in the actual kaggle image
 apt remove -y -qq libxml2
 conda install -c conda-forge libxml2
+
+# Replace numpy from pip with numpy from conda
+python3 -m pip uninstall -y -qq numpy
+conda install -c conda-forge numpy
