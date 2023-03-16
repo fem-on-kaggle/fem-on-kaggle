@@ -48,6 +48,7 @@ RUN cd ${DOCKER_SCRIPTS} && \
 RUN cd ${DOCKER_SCRIPTS} && \
     . ${FEM_ON_COLAB_SCRIPTS}/scripts/docker_pre.sh && \
     bash base/install_pip_packages.sh && \
+    bash base/install_conda_packages.sh && \
     . ${FEM_ON_COLAB_SCRIPTS}/scripts/docker_post.sh && \
     cd -
 
