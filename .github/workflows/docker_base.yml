@@ -36,6 +36,15 @@ jobs:
             echo "push=no" >> ${GITHUB_OUTPUT}
           fi
         shell: bash
+      - name: Determine kaggle base image
+        run: |
+          wget https://github.com/Kaggle/docker-python/raw/main/config.txt -O kaggle-config.txt
+          source kaggle-config.txt
+          rm kaggle-config.txt
+          KAGGLE_BASE_IMAGE=${BASE_IMAGE_REPO}/${CPU_BASE_IMAGE_NAME}:${BASE_IMAGE_TAG}
+          sed -i "s|FROM gcr.io/kaggle-images/python:latest|FROM ${KAGGLE_BASE_IMAGE}|g" base/Dockerfile
+          sed -i "s|echo \${GIT_COMMIT}|echo ${BASE_IMAGE_TAG}|g" base/bin/compute_docker_tag.sh
+        shell: bash
       - name: Build docker image
         run: |
           docker build --pull -t ${IMAGE_PREFIX}:latest -f base/Dockerfile .
