@@ -11,6 +11,10 @@ set -x
 # /opt/conda/lib/libtinfo.so.6: no version information available (required by bash)
 conda install -c conda-forge ncurses
 
+# Install libcurl, which is already shipped in the actual kaggle image
+apt remove -y -qq curl libcurl*
+conda install -c conda-forge libcurl
+
 # Install libxml2, which is already shipped in the actual kaggle image
 apt remove -y -qq libxml2
 conda install -c conda-forge libxml2
