@@ -65,9 +65,10 @@ ENV FEM_ON_COLAB_SCRIPTS=
 RUN rm -rf ${DOCKER_SCRIPTS}
 ENV DOCKER_SCRIPTS=
 
+RUN echo "${CONDA_PREFIX}/lib" >> /etc/ld.so.conf.d/conda.conf
+
 ENV PATH="${INSTALL_PREFIX}/bin:${PATH}" \
-    LIBRARY_PATH="${CONDA_PREFIX}/lib" \
-    LD_LIBRARY_PATH="${INSTALL_PREFIX}/lib:${CONDA_PREFIX}/lib" \
+    LD_LIBRARY_PATH="${INSTALL_PREFIX}/lib" \
     PYTHONPATH="${INSTALL_PREFIX}/lib/${PYTHON_VERSION}/site-packages" \
     CPATH="${CONDA_PREFIX}/include"
 
