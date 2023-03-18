@@ -69,8 +69,7 @@ RUN echo "${CONDA_PREFIX}/lib" >> /etc/ld.so.conf.d/z_conda.conf
 
 ENV PATH="${INSTALL_PREFIX}/bin:${PATH}" \
     LD_LIBRARY_PATH="${INSTALL_PREFIX}/lib" \
-    PYTHONPATH="${INSTALL_PREFIX}/lib/${PYTHON_VERSION}/site-packages" \
-    CPATH="${CONDA_PREFIX}/include"
+    PYTHONPATH="${INSTALL_PREFIX}/lib/${PYTHON_VERSION}/site-packages"
 
 CMD ["/bin/bash"]
 ENTRYPOINT []

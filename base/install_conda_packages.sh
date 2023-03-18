@@ -14,6 +14,7 @@ conda install -c conda-forge ncurses
 # Install libcurl, which is already shipped in the actual kaggle image
 apt remove -y -qq curl libcurl*
 conda install -c conda-forge libcurl
+ln -s ${CONDA_PREFIX}/include/curl /usr/include/
 
 # Install libxml2, which is already shipped in the actual kaggle image
 apt remove -y -qq libxml2
