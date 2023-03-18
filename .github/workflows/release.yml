@@ -266,7 +266,7 @@ jobs:
           else
             LD_PRELOAD_FOR_PYTEST=""
           fi
-          CPPFLAGS="" LDFLAGS="" LD_LIBRARY_PATH="" LD_PRELOAD="${LD_PRELOAD_FOR_PYTEST}" ARGS="${ARGS}" pytest --nbval-cell-timeout=300 ${LIBRARY}/
+          CPATH="" CPPFLAGS="" LDFLAGS="" LD_LIBRARY_PATH="" LD_PRELOAD="${LD_PRELOAD_FOR_PYTEST}" ARGS="${ARGS}" pytest --nbval-cell-timeout=300 ${LIBRARY}/
         shell: bash
       - name: Check if a release is needed
         if: (inputs || github.event.inputs).task != 'test'
