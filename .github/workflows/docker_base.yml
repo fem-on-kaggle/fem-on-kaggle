@@ -44,6 +44,20 @@ jobs:
           KAGGLE_BASE_IMAGE=${BASE_IMAGE_REPO}/${CPU_BASE_IMAGE_NAME}:${BASE_IMAGE_TAG}
           sed -i "s|FROM gcr.io/kaggle-images/python:latest|FROM ${KAGGLE_BASE_IMAGE}|g" base/Dockerfile
           sed -i "s|echo \${GIT_COMMIT}|echo ${BASE_IMAGE_TAG}|g" base/bin/compute_docker_tag.sh
+          docker pull ${KAGGLE_BASE_IMAGE}
+        shell: bash
+      - name: Determine conda packages installed in the actual kaggle image
+        run: |
+          KAGGLE_IMAGE=gcr.io/kaggle-images/python
+          docker pull ${KAGGLE_IMAGE}:latest
+          docker run --rm ${KAGGLE_IMAGE}:latest conda list | grep -v "pypi" | grep -v "^#" | awk 'BEGIN{OFS="="} {print $1,$2,$3}' > kaggle-pkgs.txt
+          docker rmi $(docker images ${KAGGLE_IMAGE} -a -q)
+          declare -a ALL_PACKAGES=("ncurses" "libcurl" "libxml2" "numpy")
+          for PACKAGE in "${ALL_PACKAGES[@]}"; do
+            PACKAGE_WITH_VERSION=$(sed -n "/^${PACKAGE}=/p" kaggle-pkgs.txt)
+            sed -i "s|conda install -c conda-forge ${PACKAGE}|conda install ${PACKAGE_WITH_VERSION}|g" base/install_conda_packages.sh
+          done
+          rm kaggle-pkgs.txt
         shell: bash
       - name: Build docker image
         run: |
