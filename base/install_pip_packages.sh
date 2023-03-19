@@ -10,6 +10,9 @@ set -x
 # Install cython, which is already shipped in the actual kaggle image
 PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip install --user cython
 
+# Install sympy, which is already shipped in the actual kaggle image
+PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip install --user sympy
+
 # Install cmake (for building)
 PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip install --user cmake
 

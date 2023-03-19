@@ -53,7 +53,7 @@ jobs:
           docker run --rm ${KAGGLE_IMAGE}:latest conda list | grep "pypi" | grep -v "^#" | awk 'BEGIN{OFS="=="} {print $1,$2}' > kaggle-pip-pkgs.txt
           docker run --rm ${KAGGLE_IMAGE}:latest conda list | grep -v "pypi" | grep -v "^#" | awk 'BEGIN{OFS="="} {print $1,$2,$3}' > kaggle-conda-pkgs.txt
           docker rmi $(docker images ${KAGGLE_IMAGE} -a -q)
-          declare -a ALL_PIP_PACKAGES=("cython")
+          declare -a ALL_PIP_PACKAGES=("cython" "sympy")
           for PACKAGE in "${ALL_PIP_PACKAGES[@]}"; do
             PACKAGE_WITH_VERSION=$(sed -n "/^${PACKAGE}==/p" kaggle-pip-pkgs.txt)
             sed -i "s|python3 -m pip install --user ${PACKAGE}|python3 -m pip install --user ${PACKAGE_WITH_VERSION}|g" base/install_pip_packages.sh
