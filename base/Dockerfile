@@ -67,6 +67,8 @@ ENV DOCKER_SCRIPTS=
 
 RUN echo "${CONDA_PREFIX}/lib" >> /etc/ld.so.conf.d/z_conda.conf
 
+ENV KAGGLE_URL_BASE="https://www.kaggle.com"
+
 ENV PATH="${INSTALL_PREFIX}/bin:${PATH}" \
     LD_LIBRARY_PATH="${INSTALL_PREFIX}/lib" \
     PYTHONPATH="${INSTALL_PREFIX}/lib/${PYTHON_VERSION}/site-packages"
