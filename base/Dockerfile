@@ -19,7 +19,9 @@ ENV BACKEND_LIBRARY=kaggle \
 
 RUN rm -rf ${INSTALL_PREFIX} && \
     mkdir -p ${INSTALL_PREFIX} && \
-    mkdir -p ${INSTALL_PREFIX}/lib/${PYTHON_VERSION}/site-packages
+    mkdir -p ${INSTALL_PREFIX}/bin && \
+    mkdir -p ${INSTALL_PREFIX}/lib/${PYTHON_VERSION}/site-packages && \
+    ln -s ${INSTALL_PREFIX}/lib ${INSTALL_PREFIX}/lib64
 
 COPY . ${DOCKER_SCRIPTS}
 
