@@ -22,3 +22,6 @@ ln -s ${CONDA_PREFIX}/lib/libssh2* /usr/lib/
 # Install libxml2, which is already shipped in the actual kaggle image
 apt remove -y -qq libxml2
 conda install -c conda-forge libxml2
+
+# Remove pkgs cache to decrease the image size
+rm -rf ${CONDA_PREFIX}/pkgs

@@ -76,7 +76,13 @@ jobs:
         shell: bash
       - name: Build docker image
         run: |
-          docker build --pull -t ${IMAGE_PREFIX}:latest -f base/Dockerfile .
+          docker build --pull -t ${IMAGE_PREFIX}:unsquashed -f base/Dockerfile .
+      - name: Squash docker image
+        if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && steps.push.outputs.push == 'yes'
+        run: |
+          pip install docker-squash
+          docker-squash -t ${IMAGE_PREFIX}:latest ${IMAGE_PREFIX}:unsquashed
+          docker rmi ${IMAGE_PREFIX}:unsquashed
       - name: Determine image tag
         if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && steps.push.outputs.push == 'yes'
         id: image_name
