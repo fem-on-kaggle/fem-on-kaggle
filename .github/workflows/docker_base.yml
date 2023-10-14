@@ -74,9 +74,13 @@ jobs:
           rm kaggle-pip-pkgs.txt
           rm kaggle-conda-pkgs.txt
         shell: bash
+      - name: Enable experimental docker features
+        run: |
+          sudo sed -i 's/}/,"experimental": true}/' /etc/docker/daemon.json
+          sudo systemctl restart docker
       - name: Build docker image
         run: |
-          docker build --pull -t ${IMAGE_PREFIX}:latest -f base/Dockerfile .
+          DOCKER_BUILDKIT=0 docker build --pull --squash -t ${IMAGE_PREFIX}:latest -f base/Dockerfile .
       - name: Determine image tag
         if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && steps.push.outputs.push == 'yes'
         id: image_name
