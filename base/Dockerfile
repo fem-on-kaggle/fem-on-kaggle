@@ -25,7 +25,8 @@ RUN rm -rf ${INSTALL_PREFIX} && \
 
 COPY . ${DOCKER_SCRIPTS}
 
-RUN apt install -y -qq git && \
+RUN apt update --allow-releaseinfo-change && \
+    apt install -y -qq git && \
     git clone https://github.com/fem-on-colab/fem-on-colab.git ${FEM_ON_COLAB_SCRIPTS}
 
 RUN cd ${DOCKER_SCRIPTS} && \
