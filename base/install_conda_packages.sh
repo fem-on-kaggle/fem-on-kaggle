@@ -28,6 +28,10 @@ ln -s ${CONDA_PREFIX}/lib/libssh2* /usr/lib/
 apt remove -y -qq libxml2
 micromamba install -c conda-forge libxml2
 
+# SSL package shipped with conda does not allow certificate verification
+SSL_FILE=$(python3 -c "import ssl; print(ssl.__file__)")
+sed -i 's|_create_default_https_context = create_default_context|_create_default_https_context = _create_unverified_context|g' ${SSL_FILE}
+
 # Remove pkgs cache to decrease the image size
 rm -rf ${CONDA_PREFIX}/pkgs
 
