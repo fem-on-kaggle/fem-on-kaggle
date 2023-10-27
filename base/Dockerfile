@@ -10,8 +10,7 @@ MAINTAINER Francesco Ballarin <francesco.ballarin@unicatt.it>
 ENV CONDA_PREFIX=/opt/conda \
     INSTALL_PREFIX=/root/.local \
     PROJECT_NAME=fem-on-kaggle \
-    PYTHON_VERSION=python3.10 \
-    REQUIRE_LIBSTDCXX_REPLACEMENT=no
+    PYTHON_VERSION=python3.10
 
 ENV BACKEND_LIBRARY=kaggle \
     DOCKER_SCRIPTS=${INSTALL_PREFIX}/share/${PROJECT_NAME} \
