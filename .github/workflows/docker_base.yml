@@ -33,7 +33,7 @@ jobs:
           remove-dotnet: 'true'
           remove-haskell: 'true'
           remove-codeql: 'true'
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Determine whether to push the released image to docker registry
         id: push
         run: |
