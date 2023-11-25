@@ -1,4 +1,9 @@
-[tool.flake8]
-max-line-length = 120
-show-source = true
-ignore = "W503"
+[tool.ruff]
+line-length = 120
+select = ["E", "F", "ICN", "Q", "RUF", "W"]
+
+[tool.ruff.pycodestyle]
+max-doc-length = 120
+
+[tool.ruff.pydocstyle]
+convention = "numpy"

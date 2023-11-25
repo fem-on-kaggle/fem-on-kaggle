@@ -15,7 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: pip3 -q install --upgrade flake8 Flake8-pyproject
-      - name: Run flake8 checks
+        run: python3 -m pip -q install --upgrade nbqa ruff yamllint
+      - name: Run ruff on python files
         run: |
-          flake8 .
+          python3 -m ruff .
+      - name: Run yamllint
+        run: |
+          python3 -m yamllint -d "{extends: default, rules: {document-start: {present: false}, line-length: disable, truthy: {check-keys: false}}}" .
