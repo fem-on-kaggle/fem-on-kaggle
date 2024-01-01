@@ -1,4 +1,4 @@
-# Copyright (C) 2022-2023 by the FEM on Kaggle authors
+# Copyright (C) 2022-2024 by the FEM on Kaggle authors
 #
 # This file is part of FEM on Kaggle.
 #
