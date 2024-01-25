@@ -1,6 +1,7 @@
 [tool.ruff]
 line-length = 120
-select = ["E", "F", "ICN", "Q", "RUF", "W"]
+target-version = "py310" # since PYTHON_VERSION=python3.10 in base/Dockerfile
+select = ["E", "F", "FLY", "ICN", "Q", "RUF", "UP", "W"]
 
 [tool.ruff.pycodestyle]
 max-doc-length = 120
