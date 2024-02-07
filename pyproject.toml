@@ -1,10 +1,12 @@
 [tool.ruff]
 line-length = 120
 target-version = "py310" # since PYTHON_VERSION=python3.10 in base/Dockerfile
+
+[tool.ruff.lint]
 select = ["E", "F", "FLY", "ICN", "Q", "RUF", "UP", "W"]
 
-[tool.ruff.pycodestyle]
+[tool.ruff.lint.pycodestyle]
 max-doc-length = 120
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "numpy"
