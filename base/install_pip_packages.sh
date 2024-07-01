@@ -24,10 +24,6 @@ diff --changed-group-format='%<%>' --unchanged-group-format='' /tmp/pip-freeze-i
 # Install cython, which is already shipped in the actual kaggle image
 PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip install --user cython
 
-# Replace numpy with the same one shipped in the actual kaggle image
-python3 -m pip uninstall -y -qq numpy
-PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip install --user numpy
-
 # Install sympy, which is already shipped in the actual kaggle image
 PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip install --user sympy
 

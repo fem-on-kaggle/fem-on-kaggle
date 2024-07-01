@@ -28,6 +28,10 @@ ln -s ${CONDA_PREFIX}/lib/libssh2* /usr/lib/
 apt remove -y -qq libxml2
 micromamba install -c conda-forge libxml2
 
+# Replace numpy from pip with numpy from conda, which is the one shipped in the actual kaggle image
+python3 -m pip uninstall -y -qq numpy
+micromamba install -c conda-forge numpy
+
 # SSL package shipped with conda does not allow certificate verification
 SSL_FILE=$(python3 -c "import ssl; print(ssl.__file__)")
 sed -i 's|_create_default_https_context = create_default_context|_create_default_https_context = _create_unverified_context|g' ${SSL_FILE}
