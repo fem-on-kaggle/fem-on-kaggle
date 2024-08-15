@@ -85,7 +85,7 @@ jobs:
           github.event_name != 'schedule' && github.event.inputs.library != 'boost' && needs.test_gcc.result == 'success' && always() && !cancelled()
         )
       )
-    uses: fem-on-kaggle/fem-on-kaggle/.github/workflows/release.yml@main
+    uses: fem-on-kaggle/fem-on-kaggle/.github/workflows/release.yml@boost
     with:
       library: "boost"
       task: "build"

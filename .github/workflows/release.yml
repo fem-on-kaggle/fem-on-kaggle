@@ -46,7 +46,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: fem-on-colab/fem-on-colab
-          ref: main
+          ref: boost
           set-safe-directory: false
       - name: Mark FEM on Kaggle directory as safe
         run: |
