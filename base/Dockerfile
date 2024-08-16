@@ -5,7 +5,6 @@
 # SPDX-License-Identifier: MIT
 
 FROM gcr.io/kaggle-images/python:latest
-MAINTAINER Francesco Ballarin <francesco.ballarin@unicatt.it>
 
 ENV CONDA_PREFIX=/opt/conda \
     INSTALL_PREFIX=/root/.local \
