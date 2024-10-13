@@ -84,7 +84,7 @@ jobs:
       - name: Squash docker image
         if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && steps.push.outputs.push == 'yes'
         run: |
-          pip install docker-squash
+          pip install --break-system-packages docker-squash
           docker-squash -t ${IMAGE_PREFIX}:latest ${IMAGE_PREFIX}:unsquashed
           docker rmi ${IMAGE_PREFIX}:unsquashed
       - name: Determine image tag
