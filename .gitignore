@@ -1,2 +1,5 @@
 *~
 *.bak
+apt-list.txt
+git-commit.txt
+pip-freeze.txt

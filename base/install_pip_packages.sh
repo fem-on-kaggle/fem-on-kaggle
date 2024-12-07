@@ -4,51 +4,29 @@
 #
 # SPDX-License-Identifier: MIT
 
-set -e
-set -x
+# Kaggle image is based on Colab one (with a few additions/changes to packages)
+# so start from the script provided by FEM on Colab
+cp ${FEM_ON_COLAB_SCRIPTS}/base/install_pip_packages.sh ${DOCKER_SCRIPTS}/base/install_pip_packages_colab.sh
 
-# Get list of installed packages
-PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip freeze > /tmp/pip-freeze-installed.txt
-cp /tmp/pip-freeze-installed.txt /tmp/pip-freeze-with-removal.txt
-
-# Remove machine learning packages to decrease the image size
-remove_machine_learning_packages () {
-    grep -v -e "^chex" -e "^datascience" -e "^en-core-web-sm" -e "^fastai" -e "^flax" -e "^gensim" -e "^jax" -e "^kapre" -e "^keras" -e "^Keras" -e "^malloy" -e "^optax" -e "^orbax" -e "^tensorboard" -e "^tensorflow" -e "^torch" -e "^triton" -e "^xgboost" -h ${1} > ${1}.tmp
+# Blacklist a few other Kaggle specific packages, installed either by Dockerfile.tmpl or kaggle_requirements.txt
+read -r -d '' BLACKLIST_KAGGLE_PACKAGES << "EOL"
+remove_kaggle_packages () {
+    grep -v -e "^annoy" -e "bq_helper$" -e "^bayesian-optimization" -e "^Boruta" -e "^Cartopy" -e "^category-encoders" -e "^cesium" -e "^dask" -e "^datasets" -e "^datashader" -e "^deap" -e "^dipy" -e "^distributed" -e "^docker" -e "^easyocr" -e "^eli5" -e "^fasttext" -e "^featuretools" -e "^h2o" -e "^hep-ml" -e "^hep_ml" -e "^imutils" -e "^jieba" -e "^kaggle" -e "^kornia" -e "^learntools" -e "^libpysal" -e "^lime" -e "^mlcrate" -e "^nilearn" -e "^nltk" -e "^optuna" -e "^preprocessing" -e "^pyLDAvis" -e "^pymc3" -e "^pytorch" -e "^rgf-python" -e "^segment_anything" -e "^stable-baselines" -e "^textblob" -e "^Theano" -e "^TPOT" -e "^tsfresh" -e "^wandb" -h ${1} > ${1}.tmp
     mv ${1}.tmp ${1}
 }
-remove_machine_learning_packages /tmp/pip-freeze-with-removal.txt
+remove_kaggle_packages ${BACKEND_INFO}/pip-freeze-clean.txt
+EOL
+BLACKLIST_KAGGLE_PACKAGES="${BLACKLIST_KAGGLE_PACKAGES//$'\n'/\\n}"
+BLACKLIST_KAGGLE_PACKAGES="${BLACKLIST_KAGGLE_PACKAGES//\$/\\$}"
+perl -i -pe "s|remove_misc_packages \\\${BACKEND_INFO}/pip-freeze-clean.txt|remove_misc_packages \\\${BACKEND_INFO}/pip-freeze-clean.txt\n${BLACKLIST_KAGGLE_PACKAGES}|g" ${DOCKER_SCRIPTS}/base/install_pip_packages_colab.sh
 
-# Carry out removal
-diff --changed-group-format='%<%>' --unchanged-group-format='' /tmp/pip-freeze-installed.txt /tmp/pip-freeze-with-removal.txt | cut -f1 -d "=" | xargs pip uninstall -y
+# Check that blacklisted Kaggle specific packages do not get installed as part of other dependencies
+read -r -d '' BLACKLIST_KAGGLE_PACKAGES_CHECK << "EOL"
+assert_removed_packages ${BACKEND_INFO}/pip-freeze-installed.txt remove_kaggle_packages
+EOL
+BLACKLIST_KAGGLE_PACKAGES_CHECK="${BLACKLIST_KAGGLE_PACKAGES_CHECK//$'\n'/\\n}"
+BLACKLIST_KAGGLE_PACKAGES_CHECK="${BLACKLIST_KAGGLE_PACKAGES_CHECK//\$/\\$}"
+perl -i -pe "s|assert_removed_packages \\\${BACKEND_INFO}/pip-freeze-installed.txt remove_misc_packages|assert_removed_packages \\\${BACKEND_INFO}/pip-freeze-installed.txt remove_misc_packages\n${BLACKLIST_KAGGLE_PACKAGES_CHECK}|g" ${DOCKER_SCRIPTS}/base/install_pip_packages_colab.sh
 
-# Install cython, which is already shipped in the actual kaggle image
-PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip install --user cython
-
-# Install sympy, which is already shipped in the actual kaggle image
-PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip install --user sympy
-
-# Install pipdeptree to show dependency tree on failure of the next asserts
-PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip install --user pipdeptree
-
-# Check that removed packages do get installed as part of other dependencies
-PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip freeze > /tmp/pip-freeze-installed-updated.txt
-assert_removed_packages () {
-    cp ${1} ${1}.check
-    ${2} ${1}.check
-    if diff --suppress-common-lines ${1}.check ${1} > ${1}.diff; then
-        rm ${1}.check ${1}.diff
-    else
-        EXTRA_PACKAGES=$(cat ${1}.diff | grep "^> " | cut -f2 -d ">" | cut -f1 -d "=" | tr "\n" " " | sed "s/  */ /g" | xargs)
-        echo "The following extra packages have been detected: ${EXTRA_PACKAGES}."
-        echo "They may have been installed as part of the following dependencies:"
-        PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pipdeptree --reverse --packages ${EXTRA_PACKAGES// /,}
-        return 1
-    fi
-}
-assert_removed_packages /tmp/pip-freeze-installed-updated.txt remove_machine_learning_packages
-
-# Install cmake (for building)
-PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip install --user cmake
-
-# Install nbval (for testing)
-PYTHONUSERBASE=${CONDA_PREFIX} python3 -m pip install --user nbval
+# Run the installation script
+bash ${DOCKER_SCRIPTS}/base/install_pip_packages_colab.sh

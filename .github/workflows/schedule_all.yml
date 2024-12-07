@@ -49,7 +49,7 @@ jobs:
     with:
       library: "gcc"
       task: "build"
-      args: "14.1.0"
+      args: "12.3.0"
       strip-args-when-packaging: "true"
     secrets:
       REPO_ACCESS_TOKEN: ${{ secrets.REPO_ACCESS_TOKEN }}

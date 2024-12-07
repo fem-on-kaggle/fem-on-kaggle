@@ -34,6 +34,24 @@ jobs:
           remove-haskell: 'true'
           remove-codeql: 'true'
       - uses: actions/checkout@v4
+      - name: Determine backend info from an actual kaggle image
+        run: |
+          KAGGLE_IMAGE=gcr.io/kaggle-images/python
+          KAGGLE_IMAGE_TAG=staging
+          docker pull ${KAGGLE_IMAGE}:${KAGGLE_IMAGE_TAG}
+          docker run --rm ${KAGGLE_IMAGE}:${KAGGLE_IMAGE_TAG} apt list --installed > apt-list.txt
+          docker run --rm ${KAGGLE_IMAGE}:${KAGGLE_IMAGE_TAG} python3 -m pip freeze > pip-freeze.txt
+          docker run --rm ${KAGGLE_IMAGE}:${KAGGLE_IMAGE_TAG} bash -c 'echo ${GIT_COMMIT}' > git-commit.txt
+          docker rmi $(docker images ${KAGGLE_IMAGE} -a -q)
+        shell: bash
+      - name: Store backend info as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-info
+          path: |
+            apt-list.txt
+            pip-freeze.txt
+            git-commit.txt
       - name: Determine whether to push the released image to docker registry
         id: push
         run: |
@@ -44,49 +62,9 @@ jobs:
             echo "push=no" >> ${GITHUB_OUTPUT}
           fi
         shell: bash
-      - name: Determine kaggle base image
-        run: |
-          wget https://github.com/Kaggle/docker-python/raw/main/config.txt -O kaggle-config.txt
-          source kaggle-config.txt
-          rm kaggle-config.txt
-          KAGGLE_BASE_IMAGE=${BASE_IMAGE_REPO}/${CPU_BASE_IMAGE_NAME}:${BASE_IMAGE_TAG}
-          sed -i "s|FROM gcr.io/kaggle-images/python:latest|FROM ${KAGGLE_BASE_IMAGE}|g" base/Dockerfile
-          sed -i "s|echo \${GIT_COMMIT}|echo ${BASE_IMAGE_TAG}|g" base/bin/compute_docker_tag.sh
-          docker pull ${KAGGLE_BASE_IMAGE}
-        shell: bash
-      - name: Determine pip and conda packages installed in the actual kaggle image
-        run: |
-          KAGGLE_IMAGE=gcr.io/kaggle-images/python
-          docker pull ${KAGGLE_IMAGE}:latest
-          docker run --rm ${KAGGLE_IMAGE}:latest conda list | grep "pypi" | grep -v "^#" | awk 'BEGIN{OFS="=="} {print $1,$2}' > kaggle-pip-pkgs.txt
-          docker run --rm ${KAGGLE_IMAGE}:latest conda list | grep -v "pypi" | grep -v "^#" | awk 'BEGIN{OFS="="} {print $1,$2,$3}' > kaggle-conda-pkgs.txt
-          docker rmi $(docker images ${KAGGLE_IMAGE} -a -q)
-          declare -a ALL_PIP_PACKAGES=("cython" "sympy")
-          for PACKAGE in "${ALL_PIP_PACKAGES[@]}"; do
-            PACKAGE_WITH_VERSION=$(sed -n "/^${PACKAGE}==/p" kaggle-pip-pkgs.txt)
-            sed -i "s|python3 -m pip install --user ${PACKAGE}|python3 -m pip install --user ${PACKAGE_WITH_VERSION}|g" base/install_pip_packages.sh
-          done
-          declare -a ALL_CONDA_PACKAGES=("libcurl" "libxml2" "ncurses" "numpy")
-          for PACKAGE in "${ALL_CONDA_PACKAGES[@]}"; do
-            PACKAGE_WITH_VERSION=$(sed -n "/^${PACKAGE}=/p" kaggle-conda-pkgs.txt)
-            sed -i "s|micromamba install -c conda-forge ${PACKAGE}|micromamba install ${PACKAGE_WITH_VERSION}|g" base/install_conda_packages.sh
-            if [[ "${PACKAGE}" == "libcurl" ]]; then
-              CURL_VERSION=$(echo ${PACKAGE_WITH_VERSION} | cut -f2 -d "=")
-              sed -i "s|micromamba install -c conda-forge curl|micromamba install curl=${CURL_VERSION}|g" base/install_conda_packages.sh
-            fi
-          done
-          rm kaggle-pip-pkgs.txt
-          rm kaggle-conda-pkgs.txt
-        shell: bash
       - name: Build docker image
         run: |
-          docker build --pull -t ${IMAGE_PREFIX}:unsquashed -f base/Dockerfile .
-      - name: Squash docker image
-        if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && steps.push.outputs.push == 'yes'
-        run: |
-          pip install --break-system-packages docker-squash
-          docker-squash -t ${IMAGE_PREFIX}:latest ${IMAGE_PREFIX}:unsquashed
-          docker rmi ${IMAGE_PREFIX}:unsquashed
+          docker build --pull -t ${IMAGE_PREFIX}:latest -f base/Dockerfile .
       - name: Determine image tag
         if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && steps.push.outputs.push == 'yes'
         id: image_name

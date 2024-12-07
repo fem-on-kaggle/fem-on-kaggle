@@ -4,4 +4,5 @@
 #
 # SPDX-License-Identifier: MIT
 
-echo ${GIT_COMMIT}
+cd ${BACKEND_INFO}
+cat git-commit.txt

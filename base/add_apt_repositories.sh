@@ -11,9 +11,12 @@ set -x
 apt update
 apt install -y -qq software-properties-common wget
 
+# Python (as on Colab, since Kaggle gets python from the Colab base image)
+add-apt-repository -y ppa:deadsnakes/ppa
+
 # CMake (actually newer than the one on Kaggle)
 wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
-apt-add-repository -y 'deb https://apt.kitware.com/ubuntu/ focal main'
+apt-add-repository -y 'deb https://apt.kitware.com/ubuntu/ jammy main'
 
 # Git (actually newer than the one on Kaggle)
 add-apt-repository -y ppa:git-core/ppa
