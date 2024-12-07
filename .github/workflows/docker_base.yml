@@ -38,6 +38,10 @@ jobs:
         run: |
           KAGGLE_IMAGE=gcr.io/kaggle-images/python
           KAGGLE_IMAGE_TAG=staging
+          sudo cp -rf /var/lib/docker /mnt/
+          sudo rm -rf /var/lib/docker
+          sudo ln -s /mnt/docker /var/lib/
+          sudo systemctl restart docker
           docker pull ${KAGGLE_IMAGE}:${KAGGLE_IMAGE_TAG}
           docker run --rm ${KAGGLE_IMAGE}:${KAGGLE_IMAGE_TAG} apt list --installed > apt-list.txt
           docker run --rm ${KAGGLE_IMAGE}:${KAGGLE_IMAGE_TAG} python3 -m pip freeze > pip-freeze.txt
