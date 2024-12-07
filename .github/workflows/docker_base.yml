@@ -22,7 +22,7 @@ env:
   IMAGE_PREFIX: femonkaggle/base_images
 
 jobs:
-  release:
+  extract-backend-info:
     runs-on: ubuntu-latest
     steps:
       - name: Free up disk space
@@ -33,7 +33,6 @@ jobs:
           remove-dotnet: 'true'
           remove-haskell: 'true'
           remove-codeql: 'true'
-      - uses: actions/checkout@v4
       - name: Determine backend info from an actual kaggle image
         run: |
           KAGGLE_IMAGE=gcr.io/kaggle-images/python
@@ -56,6 +55,12 @@ jobs:
             apt-list.txt
             pip-freeze.txt
             git-commit.txt
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [extract-backend-info]
+    steps:
+      - uses: actions/checkout@v4
       - name: Determine whether to push the released image to docker registry
         id: push
         run: |
@@ -66,8 +71,12 @@ jobs:
             echo "push=no" >> ${GITHUB_OUTPUT}
           fi
         shell: bash
+      - name: Download backend info from artifacts
+        uses: actions/download-artifact@v4
       - name: Build docker image
         run: |
+          mv backend-info/* .
+          rm -rf backend-info
           docker build --pull -t ${IMAGE_PREFIX}:latest -f base/Dockerfile .
       - name: Determine image tag
         if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && steps.push.outputs.push == 'yes'
