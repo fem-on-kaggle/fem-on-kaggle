@@ -25,7 +25,7 @@ jobs:
       github.repository == 'fem-on-kaggle/fem-on-kaggle' && (
         github.event_name == 'schedule' || github.event.inputs.library == 'base'
       )
-    uses: fem-on-kaggle/fem-on-kaggle/.github/workflows/docker_base.yml@main
+    uses: fem-on-kaggle/fem-on-kaggle/.github/workflows/docker_base.yml@as_colab
     with:
       push: "yes"
     secrets:
