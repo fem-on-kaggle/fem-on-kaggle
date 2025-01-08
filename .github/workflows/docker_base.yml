@@ -36,7 +36,7 @@ jobs:
       - name: Determine backend info from an actual kaggle image
         run: |
           KAGGLE_IMAGE=gcr.io/kaggle-images/python
-          KAGGLE_IMAGE_TAG=staging
+          KAGGLE_IMAGE_TAG=latest
           sudo cp -rf /var/lib/docker /mnt/
           sudo rm -rf /var/lib/docker
           sudo ln -s /mnt/docker /var/lib/
