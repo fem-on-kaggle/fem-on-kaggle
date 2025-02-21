@@ -28,6 +28,7 @@ jobs:
     uses: fem-on-kaggle/fem-on-kaggle/.github/workflows/docker_base.yml@main
     with:
       push: "yes"
+      fem_on_colab_branch: "main"
 
   # gcc build & test
   build_gcc:

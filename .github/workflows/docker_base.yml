@@ -7,10 +7,15 @@ on:
     inputs:
       push:
         description: "Push the released image to docker registry (yes or no, default no)"
+      fem_on_colab_branch:
+        description: "Branch to be used in the FEM on Colab repository (default main)"
   workflow_call:
     inputs:
       push:
         description: "Push the released image to docker registry (yes or no, default no)"
+        type: string
+      fem_on_colab_branch:
+        description: "Branch to be used in the FEM on Colab repository (default main)"
         type: string
 
 env:
@@ -66,13 +71,24 @@ jobs:
             echo "push=no" >> ${GITHUB_OUTPUT}
           fi
         shell: bash
+      - name: Determine the branch to be used in the FEM on Colab repository
+        id: fem_on_colab_branch
+        run: |
+          FEM_ON_COLAB_BRANCH=${{ (inputs || github.event.inputs).fem_on_colab_branch }}
+          if [[ "${FEM_ON_COLAB_BRANCH}" == "" ]]; then
+            echo "fem_on_colab_branch=main" >> ${GITHUB_OUTPUT}
+          else
+            echo "fem_on_colab_branch=${FEM_ON_COLAB_BRANCH}" >> ${GITHUB_OUTPUT}
+          fi
+        shell: bash
       - name: Download backend info from artifacts
         uses: actions/download-artifact@v4
       - name: Build docker image
         run: |
+          FEM_ON_COLAB_BRANCH="${{ steps.fem_on_colab_branch.outputs.fem_on_colab_branch }}"
           mv backend-info/* .
           rm -rf backend-info
-          docker build --pull -t ${IMAGE_PREFIX}:latest -f base/Dockerfile .
+          docker build --pull -t ${IMAGE_PREFIX}:latest -f base/Dockerfile --build-arg FEM_ON_COLAB_BRANCH=${FEM_ON_COLAB_BRANCH} .
       - name: Determine image tag
         if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && steps.push.outputs.push == 'yes'
         id: image_name

@@ -6,6 +6,8 @@
 
 FROM ubuntu:22.04
 
+ARG FEM_ON_COLAB_BRANCH="main"
+
 ENV INSTALL_PREFIX=/usr/local \
     PROJECT_NAME=fem-on-kaggle \
     PYTHON_VERSION=python3.10
@@ -24,7 +26,9 @@ COPY . ${DOCKER_SCRIPTS}
 
 RUN apt update -y -q && \
     apt install -y -qq git && \
-    git clone https://github.com/fem-on-colab/fem-on-colab.git ${FEM_ON_COLAB_SCRIPTS}
+    git clone https://github.com/fem-on-colab/fem-on-colab.git ${FEM_ON_COLAB_SCRIPTS} && \
+    cd ${FEM_ON_COLAB_SCRIPTS} && \
+    git checkout ${FEM_ON_COLAB_BRANCH}
 
 RUN cd ${DOCKER_SCRIPTS} && \
     . ${FEM_ON_COLAB_SCRIPTS}/scripts/docker_pre.sh && \
