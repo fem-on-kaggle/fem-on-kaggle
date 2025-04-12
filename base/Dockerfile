@@ -10,7 +10,7 @@ ARG FEM_ON_COLAB_BRANCH="main"
 
 ENV INSTALL_PREFIX=/usr/local \
     PROJECT_NAME=fem-on-kaggle \
-    PYTHON_VERSION=python3.10
+    PYTHON_VERSION=python3.11
 
 ENV BACKEND_INFO=${INSTALL_PREFIX}/share/backend-info \
     BACKEND_LIBRARY=kaggle \
