@@ -19,7 +19,7 @@ ENV BACKEND_INFO=${INSTALL_PREFIX}/share/backend-info \
 
 RUN mkdir -p ${INSTALL_PREFIX} && \
     mkdir -p ${INSTALL_PREFIX}/bin && \
-    mkdir -p ${INSTALL_PREFIX}/lib/${PYTHON_VERSION}/site-packages && \
+    mkdir -p ${INSTALL_PREFIX}/lib/${PYTHON_VERSION}/dist-packages && \
     ln -s ${INSTALL_PREFIX}/lib ${INSTALL_PREFIX}/lib64
 
 COPY . ${DOCKER_SCRIPTS}
