@@ -69,6 +69,8 @@ RUN cd ${DOCKER_SCRIPTS} && \
     cp -r base/share/* /usr/share && \
     cd -
 
+ENV KAGGLE_URL_BASE="https://www.kaggle.com"
+
 RUN rm -rf ${FEM_ON_COLAB_SCRIPTS}
 ENV FEM_ON_COLAB_SCRIPTS=
 
