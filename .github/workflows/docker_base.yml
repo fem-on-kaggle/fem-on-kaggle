@@ -82,7 +82,7 @@ jobs:
           fi
         shell: bash
       - name: Download backend info from artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
       - name: Build docker image
         run: |
           FEM_ON_COLAB_BRANCH="${{ steps.fem_on_colab_branch.outputs.fem_on_colab_branch }}"
