@@ -86,8 +86,6 @@ jobs:
       - name: Build docker image
         run: |
           FEM_ON_COLAB_BRANCH="${{ steps.fem_on_colab_branch.outputs.fem_on_colab_branch }}"
-          mv backend-info/* .
-          rm -rf backend-info
           docker build --pull -t ${IMAGE_PREFIX}:latest -f base/Dockerfile --build-arg FEM_ON_COLAB_BRANCH=${FEM_ON_COLAB_BRANCH} .
       - name: Determine image tag
         if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && steps.push.outputs.push == 'yes'
