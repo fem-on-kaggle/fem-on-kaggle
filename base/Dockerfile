@@ -25,7 +25,7 @@ RUN mkdir -p ${INSTALL_PREFIX} && \
 COPY . ${DOCKER_SCRIPTS}
 
 RUN apt update -y -q && \
-    apt install -y -qq git && \
+    apt install -y -qq ca-certificates git && \
     git clone https://github.com/fem-on-colab/fem-on-colab.git ${FEM_ON_COLAB_SCRIPTS} && \
     cd ${FEM_ON_COLAB_SCRIPTS} && \
     git checkout ${FEM_ON_COLAB_BRANCH}
