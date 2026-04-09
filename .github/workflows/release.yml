@@ -43,7 +43,7 @@ jobs:
         run: |
           git config --global --add safe.directory "${GITHUB_WORKSPACE}"
       - name: Clone FEM on Colab repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           repository: fem-on-colab/fem-on-colab
           ref: main
@@ -52,7 +52,7 @@ jobs:
         run: |
           git config --global --add safe.directory _fem_on_kaggle
       - name: Clone FEM on Kaggle repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           path: _fem_on_kaggle
           set-safe-directory: false
@@ -84,7 +84,7 @@ jobs:
           git config --global --add safe.directory _build/html
       - name: Clone website repository
         if: (inputs || github.event.inputs).task != 'test'
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           repository: fem-on-kaggle/fem-on-kaggle.github.io
           token: ${{ steps.token_website.outputs.token }}
@@ -271,18 +271,14 @@ jobs:
       - name: Add release to repository
         if: (inputs || github.event.inputs).task != 'test' && steps.check_release.outputs.needs_release_archive == 'yes'
         timeout-minutes: 5
-        uses: Wandalen/wretry.action@master
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd  # v1.21.0
         with:
-          action: ncipollo/release-action@v1
-          with: |
-            token: ${{ steps.token_tag.outputs.token }}
-            tag: ${{ steps.check_release.outputs.release_tag }}
-            name: "${{ steps.check_release.outputs.release_title }}"
-            prerelease: true
-            artifacts: ${{ steps.check_release.outputs.release_archive }}
-            artifactErrorsFailBuild: true
-          attempt_limit: 10
-          attempt_delay: 30000
+          token: ${{ steps.token_tag.outputs.token }}
+          tag: ${{ steps.check_release.outputs.release_tag }}
+          name: "${{ steps.check_release.outputs.release_title }}"
+          prerelease: true
+          artifacts: ${{ steps.check_release.outputs.release_archive }}
+          artifactErrorsFailBuild: true
       - name: Verify that archive has been correctly uploaded
         if: (inputs || github.event.inputs).task != 'test' && steps.check_release.outputs.needs_release_archive == 'yes'
         run: |
@@ -386,7 +382,7 @@ jobs:
         shell: bash
       - name: Upload archive as an artifact in case of failure
         if: failure() || cancelled()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: "artifact ${{ (inputs || github.event.inputs).library }} ${{ (inputs || github.event.inputs).task }} ${{ (inputs || github.event.inputs).args }}"
           path: |

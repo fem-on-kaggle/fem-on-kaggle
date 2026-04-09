@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Sync GitHub workflows with FEM on Colab
         if: github.repository == 'fem-on-kaggle/fem-on-kaggle'
-        uses: fem-on-colab/is-synced-with-upstream-action@main
+        uses: fem-on-colab/is-synced-with-upstream-action@f4d4a7988a560ea8c951d6779274cd230d13879b  # v1.0.0
         with:
           upstream-repository: fem-on-colab/fem-on-colab
           upstream-ref: main
@@ -29,7 +29,7 @@ jobs:
     steps:
       - name: Warn if scheduled workflow is about to be disabled
         if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && github.ref == 'refs/heads/main' && github.event_name == 'schedule'
-        uses: fem-on-colab/warn-workflow-about-to-be-disabled-action@main
+        uses: fem-on-colab/warn-workflow-about-to-be-disabled-action@58c6022d9aeb22accfa8df9bf5b58c3d8867208c  # v1.0.0
         with:
           workflow-filename: sync_with_upstream.yml
           days-elapsed: 50
