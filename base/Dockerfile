@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ARG FEM_ON_COLAB_BRANCH="main"
 
