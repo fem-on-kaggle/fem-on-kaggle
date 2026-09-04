@@ -7,6 +7,13 @@ on:
     inputs:
       push:
         description: "Push the released image to docker registry (yes or no, default no)"
+      channel:
+        description: "Release channel"
+        type: choice
+        options:
+          - production
+          - staging
+        default: production
       fem_on_colab_branch:
         description: "Branch to be used in the FEM on Colab repository (default main)"
   workflow_call:
@@ -14,12 +21,18 @@ on:
       push:
         description: "Push the released image to docker registry (yes or no, default no)"
         type: string
+      channel:
+        description: "Release channel"
+        type: string
+        default: production
       fem_on_colab_branch:
         description: "Branch to be used in the FEM on Colab repository (default main)"
         type: string
 
 env:
   IMAGE_PREFIX: ghcr.io/fem-on-kaggle/base
+  IMAGE_CHANNEL_TAG: ${{ inputs.channel == 'staging' && 'staging' || 'latest' }}
+  IMAGE_COMPATIBILITY_TAG_PREFIX: ${{ inputs.channel == 'staging' && 'staging-' || '' }}
 
 jobs:
   extract-backend-info:
@@ -86,12 +99,46 @@ jobs:
       - name: Build docker image
         run: |
           FEM_ON_COLAB_BRANCH="${{ steps.fem_on_colab_branch.outputs.fem_on_colab_branch }}"
-          docker build --pull -t ${IMAGE_PREFIX}:latest -f base/Dockerfile --build-arg FEM_ON_COLAB_BRANCH=${FEM_ON_COLAB_BRANCH} .
+          docker build --pull -t ${IMAGE_PREFIX}:${IMAGE_CHANNEL_TAG} -f base/Dockerfile --build-arg FEM_ON_COLAB_BRANCH=${FEM_ON_COLAB_BRANCH} .
+      - name: Print docker image size
+        run: |
+          SIZE=$(docker image inspect "${IMAGE_PREFIX}:${IMAGE_CHANNEL_TAG}" --format='{{.Size}}')
+          echo "Final image size: $(numfmt --to=iec "$SIZE")"
+      - name: Print biggest apt packages
+        run: |
+          docker run --rm -i "${IMAGE_PREFIX}:${IMAGE_CHANNEL_TAG}" sh -s <<'SH'
+          dpkg-query -W -f='${Installed-Size}\t${Package}\n' |
+            sort -nr |
+            head -20 |
+            awk '{printf "%.1f MB\t%s\n", $1/1024, $2}'
+          SH
+      - name: Print biggest pip packages
+        run: |
+          docker run --rm -i "${IMAGE_PREFIX}:${IMAGE_CHANNEL_TAG}" python3 - <<'PY'
+          import importlib.metadata
+          import os
+
+          rows = []
+
+          for dist in importlib.metadata.distributions():
+              try:
+                  size = sum(
+                      os.path.getsize(dist.locate_file(f))
+                      for f in (dist.files or [])
+                      if os.path.isfile(dist.locate_file(f))
+                  )
+                  rows.append((size, dist.metadata["Name"]))
+              except (OSError, TypeError):
+                  pass
+
+          for size, name in sorted(rows, reverse=True)[:20]:
+              print(f"{size / 1024 / 1024:8.1f} MB  {name}")
+          PY
       - name: Determine image tag
         if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && steps.push.outputs.push == 'yes'
         id: image_name
         run: |
-          IMAGE_TAG=$(docker run -i ${IMAGE_PREFIX}:latest bash /usr/bin/compute_docker_tag.sh)
+          IMAGE_TAG=$(docker run -i ${IMAGE_PREFIX}:${IMAGE_CHANNEL_TAG} bash /usr/bin/compute_docker_tag.sh)
           echo "image_tag=${IMAGE_TAG}" >> ${GITHUB_OUTPUT}
       - name: Log into the docker registry
         if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && steps.push.outputs.push == 'yes'
@@ -100,6 +147,7 @@ jobs:
         if: github.repository == 'fem-on-kaggle/fem-on-kaggle' && steps.push.outputs.push == 'yes'
         run: |
           IMAGE_TAG="${{ steps.image_name.outputs.image_tag }}"
-          docker tag ${IMAGE_PREFIX}:latest ${IMAGE_PREFIX}:${IMAGE_TAG}
-          docker push ${IMAGE_PREFIX}:latest
-          docker push ${IMAGE_PREFIX}:${IMAGE_TAG}
+          REGISTRY_IMAGE_TAG="${IMAGE_COMPATIBILITY_TAG_PREFIX}${IMAGE_TAG}"
+          docker tag ${IMAGE_PREFIX}:${IMAGE_CHANNEL_TAG} ${IMAGE_PREFIX}:${REGISTRY_IMAGE_TAG}
+          docker push ${IMAGE_PREFIX}:${IMAGE_CHANNEL_TAG}
+          docker push ${IMAGE_PREFIX}:${REGISTRY_IMAGE_TAG}
